@@ -4,6 +4,6 @@
 ### Circular Buffer Implementation using array
 
 ```
-gcc -Wall -Werror test_cbfifo.c cbfifo.c cbfifo.h test_cbfifo.h -o test_output
+gcc -Wall -Werror test_cbfifo.c cbfifo.c -o test_run
 ```
 
