@@ -5,18 +5,15 @@
  * 
  */
 
-//#include "./cbfifo.h"
-//Including the cbfifo.h file breaks everything. The code won't compile raising a host of errors each more unpassable than the one before.
-//If the definitions in the cbfifo.h file could be modifed to include 'static inline' then it could've been included without issues.
-//
-//Also, the functions had to be delcared 'static inline' so that the compiler won't throw 'multiple definitions' error.
+#include "cbfifo.h"
+#include "utility.h"
 
 #include <stdint.h>
 
 #define MAX_LENGTH 128
 
 
-extern struct CircularBuffer{
+struct CircularBuffer{
     char buffer[MAX_LENGTH];
 
     uint8_t head;
@@ -34,7 +31,7 @@ extern struct CircularBuffer{
  * Returns:
  *   The capacity, in bytes, for the FIFO
  */
-static inline size_t cbfifo_capacity(){
+size_t cbfifo_capacity(){
     return MAX_LENGTH-1;
 }
 
@@ -48,11 +45,11 @@ static inline size_t cbfifo_capacity(){
  * Returns:
  *   Number of bytes currently available to be dequeued from the FIFO
  */
-static inline size_t cbfifo_length(){
+size_t cbfifo_length(){
     if(cb.tail >= cb.head){
         return cb.tail - cb.head;
     }
-    return (cb.tail-cb.head) % (cbfifo_capacity()+1);
+    return (cb.tail-cb.head) & cbfifo_capacity();
 }
 
 
@@ -65,7 +62,7 @@ static inline size_t cbfifo_length(){
  * Returns:
  *   The available space, in bytes, for the FIFO
  */
-static inline size_t cbfifo_available(){
+size_t cbfifo_available(){
     return cbfifo_capacity() - cbfifo_length();
 }
 
@@ -81,14 +78,14 @@ static inline size_t cbfifo_available(){
  *   The number of bytes actually enqueued, which could be 0. In case
  * of an error, returns (size_t) -1.
  */
-static inline size_t cbfifo_enqueue(void *buf, size_t nbyte){
+size_t cbfifo_enqueue(void *buf, size_t nbyte){
     if(buf==NULL)
         return -1;
 
     void *s = buf;
     while(cbfifo_available() && (s-buf<nbyte)){
         cb.buffer[cb.tail] = *((char*)s++);
-        cb.tail = (cb.tail+1)% (cbfifo_capacity()+1);
+        cb.tail = (cb.tail+1)& cbfifo_capacity();
     }        
     return s-buf;
 }
@@ -113,12 +110,39 @@ static inline size_t cbfifo_enqueue(void *buf, size_t nbyte){
  * any number of bytes will result in a return of 0 from
  * cbfifo_dequeue.
  */
-static inline size_t cbfifo_dequeue(void *buf, size_t nbyte){
+size_t cbfifo_dequeue(void *buf, size_t nbyte){
     char *s = buf;
 
     while(cbfifo_length() && (s-(char*)buf<nbyte)){
         *(s++) = cb.buffer[cb.head];
-        cb.head = (cb.head+1)% (cbfifo_capacity()+1);
+        cb.head = (cb.head+1)& cbfifo_capacity();
     }
     return s - (char*)buf;
+}
+
+
+/*
+ * Resets the circular buffer
+ *
+ * Parameters:
+ *   none
+ * 
+ * Returns:
+ *  none
+ */
+void reset_fifo(){
+    for(int i =0; i<cbfifo_capacity();i++)
+        cb.buffer[i]=0;
+    cb.head = 0;
+    cb.tail = 0;
+}
+
+
+
+uint32_t get_tail(){
+    return cb.tail;
+}
+
+uint32_t get_head(){
+    return cb.head;
 }

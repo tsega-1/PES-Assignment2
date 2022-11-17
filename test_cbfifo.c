@@ -5,29 +5,23 @@
  * 
  */
 
-
-#include "./test_cbfifo.h"
-#include "./cbfifo.c"
 #include <string.h>
 #include <assert.h>
 
-struct CircularBuffer cb;
+#include "test_cbfifo.h"
+#include "cbfifo.h"
+#include "utility.h"
 
+
+#define temp_buffer_size 128 
 /*
- * Resets the circular buffer
- *
- * Parameters:
- *   none
- * 
- * Returns:
- *  none
- */
-void reset_fifo(){
-    for(int i =0; i<cbfifo_capacity();i++)
-        cb.buffer[i]=0;
-    cb.head = 0;
-    cb.tail = 0;
-}
+* For temporary storage of data during testing. Needed to compare values.
+* Needs to be the same size as the FIFO because of some of the logic of the test functions
+* Would've preferred to define it in the cbfifo.h file so that re-declaring it would be unnecessary.
+  Declaring it in a new *.h file seemed a bit of overkill
+*/
+
+
 
 /*
  * Tests the cbfifo_enqueue function
@@ -51,11 +45,11 @@ int test_cbfifo_enqueue(void *buf, size_t nbyte, size_t expected_return, void *e
     }
 
     if(expected_data){
-        char v1[MAX_LENGTH];
+        char v1[temp_buffer_size];
         cbfifo_dequeue(v1,nbyte);
 
         char *v2 = expected_data;
-        int LENGTH = MAX_LENGTH-1<nbyte?MAX_LENGTH-1:nbyte;
+        int LENGTH = temp_buffer_size-1<nbyte?temp_buffer_size-1:nbyte;
         for(int i =0;i<LENGTH;i++){
             if(*(v1+i)!=*(v2+i)){
                 printf("Data Mismatch at index %d\n",i);
@@ -92,7 +86,7 @@ int test_cbfifo_dequeue(void *buf, size_t nbyte, size_t expected_return, void *e
         char *v1 = buf;
 
         char *v2 = expected_data;
-        int LENGTH = MAX_LENGTH-1<nbyte?MAX_LENGTH-1:nbyte;
+        int LENGTH = temp_buffer_size-1<nbyte?temp_buffer_size-1:nbyte;
         for(int i =0;i<LENGTH;i++){
             if(*(v1+i)!=*(v2+i)){
                 printf("Data Mismatch at index %d\n",i);
@@ -111,18 +105,18 @@ int test_cbfifo(){
     char * buff;
     buff = "Hello There";
     assert(test_cbfifo_enqueue(buff,11,11,"Hello There")==1);
-    assert(cb.tail==11);
+    assert(get_tail()==11);
 
     buff=NULL;
     assert(test_cbfifo_enqueue(buff,5,-1,NULL)==1);
-    assert(cb.tail==11);
+    assert(get_tail()==11);
 
     buff="T";
     assert(test_cbfifo_enqueue(buff,1,1,"T")==1);
-    assert(cb.tail==12);
+    assert(get_tail()==12);
 
     reset_fifo();
-    assert(cb.tail==0);
+    assert(get_tail()==0);
     int numbers[32];
     for(int i =0;i<32;i++)
         numbers[i]=i;
@@ -143,7 +137,7 @@ int test_cbfifo(){
     reset_fifo();
     buff="Test Data";
     cbfifo_enqueue(buff,8);
-    char receiver[MAX_LENGTH];
+    char receiver[temp_buffer_size];
     assert(test_cbfifo_dequeue(receiver,8,8,buff)==1);
 
     reset_fifo();
